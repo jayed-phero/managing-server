@@ -20,11 +20,26 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 async function run() {
     try {
         const blogsCollection = client.db('BlogSiteLetsIqro').collection('Blogs')
+        const userCollection = client.db('BlogSiteLetsIqro').collection('ASUsers')
+
+        // Personal hire info
+        const pOrderCollection = client.db('PersonalServer').collection('SiteOrder')
+        const myuserCollection = client.db('PersonalServer').collection('MyUser')
+
+
 
 
 
         app.get('/blogs', async (req, res) => {
             const result = await blogsCollection.find().toArray()
+            res.send(result)
+        })
+
+
+        app.get('/blogdetails/:id', async (req, res) => {
+            const id = req.params.id
+            const query = { _id: new ObjectId(id) }
+            const result = await blogsCollection.findOne(query)
             res.send(result)
         })
 
@@ -51,6 +66,48 @@ async function run() {
 
 
 
+        // personal server 
+
+        app.put('/myuser/:email', async (req, res) => {
+            const email = req.params.email
+            const user = req.body
+            const filter = { email: email }
+            const options = { upsert: true }
+            const updateDoc = {
+                $set: user,
+            }
+            const result = await myuserCollection.updateOne(filter, updateDoc, options)
+
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+                expiresIn: '11d'
+            })
+            console.log(token)
+            res.send({ result, token })
+
+        })
+
+        
+        app.get('/sitebooking', async (req, res) => {
+            const result = await pOrderCollection.find().toArray()
+            res.send(result)
+        })
+
+        app.post('/makeorder', async (req, res) => {
+            const orderData = req.body
+            const result = await pOrderCollection.insertOne(orderData)
+            res.send(result)
+        })
+
+        app.get('/myorder/:email', async (req, res) => {
+            const email = req.params.email
+            const query = {
+                email: email
+            }
+            const result = await pOrderCollection.find(query).toArray()
+            res.send(result)
+        })
+
+        
 
 
 
@@ -86,27 +143,31 @@ async function run() {
 
 
 
-        // app.put('/user/:email', async (req, res) => {
-        //     const email = req.params.email
-        //     const user = req.body
-        //     const filter = { email: email }
-        //     const options = { upsert: true }
-        //     const updateDoc = {
-        //         $set: user,
-        //     }
 
-        //     const result = await userCollection.updateOne(filter, updateDoc, options)
+        app.put('/asuser/:email', async (req, res) => {
+            const email = req.params.email
+            const user = req.body
+            const filter = { email: email }
+            const options = { upsert: true }
+            const updateDoc = {
+                $set: user,
+            }
 
-        //     const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        //         expiresIn: '7d'
-        //     })
-        //     console.log(token)
-        //     res.send({
-        //         status: 'success',
-        //         result,
-        //         token
-        //     })
-        // })
+            const result = await userCollection.updateOne(filter, updateDoc, options)
+
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+                expiresIn: '7d'
+            })
+            console.log(token)
+            res.send({
+                status: 'success',
+                result,
+                token
+            })
+        })
+
+
+
 
         // // Gell All Catgories 
         // app.get('/categories', async (req, res) => {
@@ -151,7 +212,7 @@ async function run() {
         //     res.send(result)
         // })
 
-        // // get product details by _id 
+        // get product details by _id 
         // app.get('/product/:id', async (req, res) => {
         //     const id = req.params.id
         //     const query = { _id: new ObjectId(id) }
